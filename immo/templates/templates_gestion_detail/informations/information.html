@@ -1,0 +1,343 @@
+<form method="post">
+    {% csrf_token %}
+    <div class="form-group row" data-field="proprietor">
+        <label for="proprietor" class="col-sm-2 col-form-label">Propriétaire</label>
+        <div class="col-sm-8">
+            <span class="form-control-plaintext">{{ gestion.proprietor }}</span>
+            <input type="text" class="form-control d-none" id="proprietor" name="proprietor" value="{{ gestion.proprietor }}">
+        </div>
+        <div class="col-sm-2">
+            <button type="button" name="update_proprietor" class="btn btn-primary d-none save-btn">Enregistrer</button>
+        </div>
+    </div>
+    <div class="form-group row" data-field="contact">
+        <label for="contact" class="col-sm-2 col-form-label">Contact</label>
+        <div class="col-sm-8">
+            <span class="form-control-plaintext">{{ gestion.email }}</span>
+            <input type="text" class="form-control d-none" id="contact" name="contact" value="{{ gestion.email }}">
+        </div>
+        <div class="col-sm-2">
+            <button type="button" name="update_contact" class="btn btn-primary d-none save-btn">Enregistrer</button>
+        </div>
+    </div>
+    <div class="form-group row" data-field="address">
+        <label for="address" class="col-sm-2 col-form-label">Adresse</label>
+        <div class="col-sm-8">
+            <span class="form-control-plaintext">{{ gestion.proprietor_address }}</span>
+            <input type="text" class="form-control d-none" id="address" name="address" value="{{ gestion.proprietor_address }}">
+        </div>
+        <div class="col-sm-2">
+            <button type="button" name="update_address" class="btn btn-primary d-none save-btn">Enregistrer</button>
+        </div>
+    </div>
+</form>
+<p>Nombre de Biens: {{ gestion.biens.count }}</p>
+<h4>Utilisateurs Associés</h4>
+<div class="table-responsive">
+    <div class="table-wrapper">
+        <table class="table table-striped table-hover">
+            <thead class="thead-light">
+                <tr>
+                    <th style="width: 50%;">Nom d'utilisateur</th>
+                    <th style="width: 50%;">Rôle</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for gu in gestion.gestionuser_set.all %}
+                    <tr data-user-id="{{ gu.user.id }}" data-role="{{ gu.role }}">
+                        <td>{{ gu.user.username }}</td>
+                        <td>
+                            <span class="form-control-plaintext">{{ gu.role }}</span>
+                            <div class="d-flex align-items-center">
+                                <select class="form-control role-select d-none">
+                                    <option value="manager" {% if gu.role == 'manager' %}selected{% endif %}>Manager</option>
+                                    <option value="assistant" {% if gu.role == 'assistant' %}selected{% endif %}>Assistant</option>
+                                    <option value="viewer" {% if gu.role == 'viewer' %}selected{% endif %}>Viewer</option>
+                                </select>
+                                <button class="btn btn-primary edit-role d-none save-btn ml-2">Enregistrer</button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Menu contextuel -->
+<div id="context-menu" class="dropdown-menu">
+    <a class="dropdown-item" href="#" id="edit-item">Modifier</a>
+    <a class="dropdown-item d-none" href="#" id="delete-item">Supprimer</a>
+    <a class="dropdown-item" href="#" id="add-user-item">Ajouter un utilisateur</a>
+</div>
+
+<style>
+    .table-responsive {
+        overflow-y: hidden;
+    }
+    .table-wrapper {
+        max-height: calc(100vh - 300px - 56px - 56px); /* Ajustez cette valeur selon vos besoins */
+        overflow-y: auto;
+        position: relative;
+    }
+    .table thead th {
+        position: sticky;
+        top: 0;
+        background: #b0b0b0; /* Gris moyen pour l'en-tête */
+        z-index: 1;
+        color: white;
+    }
+    .table {
+        border-collapse: collapse;
+        width: 100%;
+        border: 1px solid #ddd; /* Contour minimaliste */
+    }
+    .table th, .table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+    .table th {
+        text-align: left;
+    }
+    .table tr {
+        background-color: white; /* Couleur de base blanc pour les lignes */
+    }
+    .table tr:hover {
+        background-color: #f1f1f1; /* Couleur de survol */
+    }
+    #context-menu {
+        display: none;
+        position: absolute;
+        z-index: 1000;
+        width: 150px;
+        border: 1px solid #ccc;
+        background-color: white;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        padding: 0;
+    }
+    #context-menu .dropdown-item {
+        padding: 10px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+    #context-menu .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const contextMenu = document.getElementById('context-menu');
+    let currentRow;
+    let currentField;
+
+    // Vérifier le rôle de l'utilisateur
+    const isManager = "{{ is_manager|yesno:'true,false' }}" === 'true';
+    const isAssistant = "{{ is_assistant|yesno:'true,false' }}" === 'true';
+
+    // Gestion du clic droit sur les lignes du tableau des utilisateurs
+    if (isManager) {
+        document.querySelectorAll('table tbody tr').forEach(row => {
+            row.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                currentRow = this;
+                currentField = null;
+                const userId = this.dataset.userId;
+
+                // Afficher les options "Modifier", "Supprimer" et "Ajouter un utilisateur"
+                document.getElementById('delete-item').classList.remove('d-none');
+                document.getElementById('add-user-item').classList.remove('d-none');
+
+                // Calculer la position
+                let left = e.clientX;
+                let top = e.clientY;
+
+                // Ajuster si le menu dépasse la fenêtre
+                const menuWidth = contextMenu.offsetWidth;
+                const menuHeight = contextMenu.offsetHeight;
+                const windowWidth = window.innerWidth;
+                const windowHeight = window.innerHeight;
+
+                if (left + menuWidth > windowWidth) {
+                    left = windowWidth - menuWidth - 10; // Décalage de 10px
+                }
+                if (top + menuHeight > windowHeight) {
+                    top = windowHeight - menuHeight - 10; // Décalage de 10px
+                }
+
+                // Appliquer la position au menu
+                contextMenu.style.left = `${left}px`;
+                contextMenu.style.top = `${top}px`;
+                contextMenu.style.display = 'block';
+
+                // Stocker l'utilisateur sélectionné
+                contextMenu.dataset.userId = userId;
+            });
+        });
+    }
+
+    // Gestion du clic droit sur les champs de formulaire
+    if (isManager || isAssistant) {
+        document.querySelectorAll('.form-group.row').forEach(field => {
+            field.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                currentField = this;
+                currentRow = null;
+
+                // Masquer les options "Supprimer" et "Ajouter un utilisateur"
+                document.getElementById('delete-item').classList.add('d-none');
+                document.getElementById('add-user-item').classList.add('d-none');
+
+                // Calculer la position
+                let left = e.clientX;
+                let top = e.clientY;
+
+                // Ajuster si le menu dépasse la fenêtre
+                const menuWidth = contextMenu.offsetWidth;
+                const menuHeight = contextMenu.offsetHeight;
+                const windowWidth = window.innerWidth;
+                const windowHeight = window.innerHeight;
+
+                if (left + menuWidth > windowWidth) {
+                    left = windowWidth - menuWidth - 10; // Décalage de 10px
+                }
+                if (top + menuHeight > windowHeight) {
+                    top = windowHeight - menuHeight - 10; // Décalage de 10px
+                }
+
+                // Appliquer la position au menu
+                contextMenu.style.left = `${left}px`;
+                contextMenu.style.top = `${top}px`;
+                contextMenu.style.display = 'block';
+            });
+        });
+    }
+
+    // Cacher le menu si on clique ailleurs
+    document.addEventListener('click', function() {
+        contextMenu.style.display = 'none';
+    });
+
+    // Activer les champs de texte et les boutons "Save" via le menu contextuel
+    document.getElementById('edit-item').addEventListener('click', function() {
+        if (currentRow) {
+            currentRow.querySelectorAll('.form-control-plaintext').forEach(element => {
+                element.classList.add('d-none');
+            });
+            currentRow.querySelectorAll('.form-control, .edit-role').forEach(element => {
+                element.classList.remove('d-none');
+            });
+        }
+        if (currentField) {
+            currentField.querySelectorAll('.form-control-plaintext').forEach(element => {
+                element.classList.add('d-none');
+            });
+            currentField.querySelectorAll('.form-control, .btn-primary').forEach(element => {
+                element.classList.remove('d-none');
+            });
+        }
+    });
+
+    // Supprimer l'utilisateur via le menu contextuel
+    document.getElementById('delete-item').addEventListener('click', function() {
+        const userId = contextMenu.dataset.userId;
+        if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+            fetch(`{% url 'gestion_detail' gestion.id %}?delete_user=${userId}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    location.reload();
+                }
+            });
+        }
+    });
+
+    // Ajouter un utilisateur via le menu contextuel
+    document.getElementById('add-user-item').addEventListener('click', function() {
+        window.open("{% url 'associer_user_gestion' gestion.id %}", "Associer un utilisateur", "width=600,height=400");
+    });
+
+    // Gestion des boutons "Save"
+    document.querySelectorAll('.save-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const formGroup = this.closest('.form-group.row');
+            const input = formGroup.querySelector('.form-control');
+            const span = formGroup.querySelector('.form-control-plaintext');
+            const fieldName = input.name;
+
+            fetch(`{% url 'gestion_detail' gestion.id %}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: new URLSearchParams({
+                    [fieldName]: input.value,
+                    'update_field': fieldName
+                })
+            }).then(response => {
+                if (response.ok) {
+                    span.textContent = input.value;
+                    input.classList.add('d-none');
+                    span.classList.remove('d-none');
+                    this.classList.add('d-none');
+                }
+            });
+        });
+    });
+
+    // Gestion des boutons "Save" dans le tableau
+    document.querySelectorAll('.edit-role').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const row = this.closest('tr');
+            const select = row.querySelector('.role-select');
+            const span = row.querySelector('.form-control-plaintext');
+            const userId = row.dataset.userId;
+            const role = select.value;
+
+            fetch(`{% url 'gestion_detail' gestion.id %}?update_role=true`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: new URLSearchParams({
+                    'user_id': userId,
+                    'role': role
+                })
+            }).then(response => {
+                if (response.ok) {
+                    span.textContent = role;
+                    select.classList.add('d-none');
+                    span.classList.remove('d-none');
+                    this.classList.add('d-none');
+                }
+            });
+        });
+    });
+
+    document.getElementById('add-user-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const username = document.getElementById('add-username').value;
+        const role = document.getElementById('add-role').value;
+        fetch(`{% url 'gestion_detail' gestion.id %}?add_user=true`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: new URLSearchParams({
+                username: username,
+                role: role
+            })
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    });
+});
+</script>

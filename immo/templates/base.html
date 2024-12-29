@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Application{% endblock %}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <style>
+        .nav-link.active {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        main {
+            flex: 1;
+            width: 100%;
+            padding: 0;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <a class="navbar-brand" href="{% url 'welcome_view' %}">Home</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav mr-auto">
+                    {% if request.session.user_id %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'welcome_view' %}">Account</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'logout_view' %}">Logout</a>
+                        </li>
+                    {% endif %}
+                </ul>
+                {% if logged_in_user %}
+                    <span class="navbar-text ml-auto">{{ logged_in_user.username }}</span>
+                {% endif %}
+            </div>
+        </nav>
+    </header>
+    <main class="container-fluid mt-4">
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="footer mt-auto py-3 bg-light">
+        <div class="container">
+            <span class="text-muted">&copy; 2024 My Application</span>
+        </div>
+    </footer>
+</body>
+</html>

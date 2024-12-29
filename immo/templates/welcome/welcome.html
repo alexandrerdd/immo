@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Welcome, {{ user.username }}</h1>
+<h2>Your Gestions</h2>
+{% if gestions %}
+    <ul>
+    {% for gestion in gestions %}
+        <li>
+            {{ gestion.name }} - {{ gestion.proprietor_address }}
+            <form method="get" action="{% url 'gestion_detail' gestion.id %}">
+                <button type="submit">View Gestion</button>
+            </form>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>You have no gestions.</p>
+{% endif %}
+{% endblock %}

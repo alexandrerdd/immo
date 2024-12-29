@@ -1,0 +1,154 @@
+<p>Nombre de Biens: {{ biens.count }}</p>
+<p>Nombre d'Unités: {{ total_units }}</p>
+<p>Nombre de Locataires: {{ total_tenants }}</p>
+<p>Rentabilité: {{ total_rent }}</p>
+<div class="table-responsive">
+    <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
+        <table class="table table-striped table-hover">
+            <thead class="thead-light" style="position: sticky; top: 0; background: white; z-index: 1;">
+                <tr>
+                    <th>Adresse</th>
+                    <th>Nombre d'Unités</th>
+                    <th>Rentabilité</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bien in biens %}
+                    <tr data-bien-id="{{ bien.id }}">
+                        <td>
+                            <span class="form-control-plaintext">{{ bien.address }}</span>
+                            <div class="d-flex align-items-center">
+                                <input type="text" class="form-control d-none" value="{{ bien.address }}">
+                                <button class="btn btn-primary d-none save-btn ml-2">Enregistrer</button>
+                            </div>
+                        </td>
+                        <td>{{ bien.units.count }}</td>
+                        <td>{{ bien.total_rent }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Menu contextuel -->
+<div id="context-menu" class="dropdown-menu">
+    <a class="dropdown-item" href="#" id="edit-item">Modifier</a>
+    <a class="dropdown-item" href="#" id="delete-item">Supprimer</a>
+    <a class="dropdown-item" href="#" id="add-bien-item">Ajouter un bien</a>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const contextMenu = document.getElementById('context-menu');
+        let currentRow;
+
+        // Gestion du clic droit sur les lignes du tableau des biens
+        document.querySelectorAll('table tbody tr').forEach(row => {
+            row.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                currentRow = this;
+
+                // Calculer la position
+                let left = e.clientX;
+                let top = e.clientY;
+
+                // Ajuster si le menu dépasse la fenêtre
+                const menuWidth = contextMenu.offsetWidth;
+                const menuHeight = contextMenu.offsetHeight;
+                const windowWidth = window.innerWidth;
+                const windowHeight = window.innerHeight;
+
+                if (left + menuWidth > windowWidth) {
+                    left = windowWidth - menuWidth - 10; // Décalage de 10px
+                }
+                if (top + menuHeight > windowHeight) {
+                    top = windowHeight - menuHeight - 10; // Décalage de 10px
+                }
+
+                // Appliquer la position au menu
+                contextMenu.style.left = `${left}px`;
+                contextMenu.style.top = `${top}px`;
+                contextMenu.style.display = 'block';
+            });
+        });
+
+        // Cacher le menu si on clique ailleurs
+        document.addEventListener('click', function() {
+            contextMenu.style.display = 'none';
+        });
+
+        // Activer les champs de texte et les boutons "Save" via le menu contextuel
+        document.getElementById('edit-item').addEventListener('click', function() {
+            if (currentRow) {
+                currentRow.querySelectorAll('.form-control-plaintext').forEach(element => {
+                    element.classList.add('d-none');
+                });
+                currentRow.querySelectorAll('.form-control, .save-btn').forEach(element => {
+                    element.classList.remove('d-none');
+                });
+            }
+        });
+
+        // Ajouter un bien via le menu contextuel
+        document.getElementById('add-bien-item').addEventListener('click', function() {
+            // Ouvrir un popup pour ajouter un bien
+            window.open('/add_bien/', 'Ajouter un bien', 'width=600,height=400');
+        });
+
+        // Supprimer un bien via le menu contextuel
+        document.getElementById('delete-item').addEventListener('click', function() {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cet immeuble ?')) {
+                const bienId = currentRow.dataset.bienId;
+                fetch(`/gestion/{{ gestion.id }}/?view=immeubles&delete_bien=1`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ bien_id: bienId })
+                }).then(response => {
+                    if (response.ok) {
+                        currentRow.remove();
+                    } else {
+                        alert('Erreur lors de la suppression de l\'immeuble.');
+                    }
+                });
+            }
+        });
+
+        // Gestion du bouton "Enregistrer"
+        document.querySelectorAll('.save-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('tr');
+                const addressInput = row.querySelector('input[type="text"]');
+                const address = addressInput.value;
+                const bienId = row.dataset.bienId;
+
+                fetch(`/gestion/{{ gestion.id }}/?view=immeubles&update_bien=1`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ bien_id: bienId, address: address })
+                }).then(response => {
+                    if (response.ok) {
+                        row.querySelector('.form-control-plaintext').textContent = address;
+                        row.querySelectorAll('.form-control, .save-btn').forEach(element => {
+                            element.classList.add('d-none');
+                        });
+                        row.querySelectorAll('.form-control-plaintext').forEach(element => {
+                            element.classList.remove('d-none');
+                        });
+                    } else {
+                        alert('Erreur lors de la mise à jour de l\'adresse.');
+                    }
+                });
+            });
+        });
+    });
+</script>

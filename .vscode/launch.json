@@ -1,0 +1,57 @@
+{
+    "configurations": [
+        {
+            "args": [
+                "runserver",
+                "8000"
+            ],
+            "django": true,
+            "name": "Django: Run",
+            "program": "${workspaceFolder}/manage.py",
+            "request": "launch",
+            "type": "python"
+        },
+        {
+            "args": [
+                "makemigrations",
+                "immo"
+            ],
+            "console": "integratedTerminal",
+            "name": "Django: Make migrations",
+            "program": "${workspaceFolder}/manage.py",
+            "request": "launch",
+            "type": "python"
+        },
+        {
+            "args": [
+                "migrate"
+            ],
+            "console": "integratedTerminal",
+            "name": "Django: Migrate",
+            "program": "${workspaceFolder}/manage.py",
+            "request": "launch",
+            "type": "python"
+        },
+        {
+            "args": [
+                "createsuperuser"
+            ],
+            "console": "integratedTerminal",
+            "name": "Django: Create super user",
+            "program": "${workspaceFolder}/manage.py",
+            "request": "launch",
+            "type": "python"
+        },
+        {
+            "args": [
+                "--cleanup"
+            ],
+            "console": "integratedTerminal",
+            "name": "Django: Stop all",
+            "program": "/usr/bin/cli",
+            "request": "launch",
+            "type": "python"
+        }
+    ],
+    "version": "0.2.0"
+}

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Associer un utilisateur à la gestion</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .modal-content {
+            max-width: 600px;
+            margin: auto;
+        }
+        #create-user-form {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addUserModalLabel">Associer un utilisateur à la gestion</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Fermer" onclick="window.close();">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="add-user-form" method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="existing-user">Sélectionner un utilisateur existant</label>
+                        <select class="form-control" id="existing-user" name="existing_user" style="width: 100%;">
+                            {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="role">Rôle</label>
+                        <select class="form-control" id="role" name="role">
+                            <option value="manager">Manager</option>
+                            <option value="assistant">Assistant</option>
+                            <option value="viewer">Viewer</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Associer</button>
+                </form>
+                <hr>
+                <button id="show-create-user-form" class="btn btn-secondary">Créer un nouvel utilisateur</button>
+                <form id="create-user-form" method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="new-username">Nom d'utilisateur</label>
+                        <input type="text" class="form-control" id="new-username" name="new_username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-email">Email</label>
+                        <input type="email" class="form-control" id="new-email" name="new_email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password">Mot de passe</label>
+                        <input type="password" class="form-control" id="new-password" name="new_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-role">Rôle</label>
+                        <select class="form-control" id="new-role" name="new_role">
+                            <option value="manager">Manager</option>
+                            <option value="assistant">Assistant</option>
+                            <option value="viewer">Viewer</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Créer et associer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#existing-user').select2({
+                placeholder: 'Sélectionner un utilisateur',
+                allowClear: true
+            });
+
+            document.getElementById('show-create-user-form').addEventListener('click', function() {
+                document.getElementById('add-user-form').style.display = 'none';
+                document.getElementById('show-create-user-form').style.display = 'none';
+                document.getElementById('create-user-form').style.display = 'block';
+            });
+
+            document.getElementById('add-user-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const userId = document.getElementById('existing-user').value;
+                const role = document.getElementById('role').value;
+                fetch(`{% url 'associer_user_gestion' gestion.id %}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: new URLSearchParams({
+                        'user_id': userId,
+                        'role': role
+                    })
+                }).then(response => {
+                    if (response.ok) {
+                        window.opener.location.reload();
+                        window.close();
+                    }
+                });
+            });
+
+            document.getElementById('create-user-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const username = document.getElementById('new-username').value;
+                const email = document.getElementById('new-email').value;
+                const password = document.getElementById('new-password').value;
+                const role = document.getElementById('new-role').value;
+                fetch(`{% url 'associer_user_gestion' gestion.id %}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: new URLSearchParams({
+                        'new_username': username,
+                        'new_email': email,
+                        'new_password': password,
+                        'new_role': role
+                    })
+                }).then(response => {
+                    if (response.ok) {
+                        window.opener.location.reload();
+                        window.close();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
