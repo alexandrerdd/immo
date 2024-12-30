@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from immo.views import register_view, login_view, welcome_view, logout_view, gestion_detail, associer_user_gestion,immeubles_view
+from immo.views import register_view, login_view, welcome_view, logout_view, gestion_detail, associer_user_gestion,immeubles_view, paiement_du_loyer_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,6 +25,7 @@ urlpatterns = [
     path('logout/', logout_view, name="logout_view"),
     path('welcome/', welcome_view, name="welcome_view"),
     path('gestion/<int:id>/', gestion_detail, name="gestion_detail"),
-    path('associer_user_gestion/<int:gestion_id>/', associer_user_gestion, name='associer_user_gestion')
+    path('associer_user_gestion/<int:gestion_id>/', associer_user_gestion, name='associer_user_gestion'),
+    path('paiements/', paiement_du_loyer_view, name='paiement_du_loyer'),
 ]
     

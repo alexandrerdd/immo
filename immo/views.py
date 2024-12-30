@@ -208,3 +208,46 @@ def gestion_detail(request, id):
         "total_rent": total_rent,
     })
 
+from django.shortcuts import render
+from .models import RentPayment, Bien, Unit, Tenant
+
+def paiement_du_loyer_view(request):
+    """
+    Vue pour afficher la page des paiements de loyers avec options de recherche et filtres.
+    """
+    # Récupérer tous les paiements
+    payments = RentPayment.objects.all()
+
+    # Filtrage initial basé sur les requêtes GET (si disponibles)
+    bien_id = request.GET.get('bien')  # ID du bien
+    unit_number = request.GET.get('unit')  # Numéro de l'unité
+    tenant_name = request.GET.get('tenant')  # Nom du locataire
+    montant_min = request.GET.get('montant_min')  # Montant minimum
+    montant_max = request.GET.get('montant_max')  # Montant maximum
+
+    # Appliquer les filtres un par un
+    if bien_id:
+        payments = payments.filter(unit__bien__id=bien_id)
+    if unit_number:
+        payments = payments.filter(unit__unit_number__icontains=unit_number)
+    if tenant_name:
+        payments = payments.filter(tenant__name__icontains=tenant_name)
+    if montant_min:
+        payments = payments.filter(amount__gte=montant_min)
+    if montant_max:
+        payments = payments.filter(amount__lte=montant_max)
+
+    # Récupérer les options pour les filtres (biens, locataires, etc.)
+    biens = Bien.objects.all()
+    tenants = Tenant.objects.filter(status='current')
+    units = Unit.objects.all()
+
+    # Contexte envoyé au template
+    context = {
+        'payments': payments,
+        'biens': biens,
+        'tenants': tenants,
+        'units': units,
+    }
+
+    return render(request, 'paiement_du_loyer.html', context)
