@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from immo.models import User, Gestion, Bien, Unit, Tenant, RentPayment, UnitTenant, GestionUser
 from django import forms
-from immo.fct_gest import immeubles_view
+from immo.fct_gest import immeubles_view, paiement_du_loyer_view
 from django.http import JsonResponse, HttpResponse
 import json
 
@@ -188,12 +188,20 @@ def gestion_detail(request, id):
                 gestion.save()
 
     # Appel de la fonction immeubles_view
-    gestion, biens, total_units, total_tenants, total_rent = immeubles_view(id)
+    if view_name == 'paiement_du_loyer':
+        bien_id = request.GET.get('bien')
+        unit_id = request.GET.get('unit')
+        tenant_id = request.GET.get('tenant')
+        montant_min = request.GET.get('montant_min')
+        montant_max = request.GET.get('montant_max')
+        gestion, payments, biens, tenants, units = paiement_du_loyer_view(id, bien_id, unit_id, tenant_id, montant_min, montant_max)
+    else:
+        gestion, biens, total_units, total_tenants, total_rent = immeubles_view(id)
 
     password_form = UserPasswordForm(instance=user)
     gestion_form = GestionForm(instance=gestion)
 
-    return render(request, "templates_gestion_detail/gestion_detail.html", {
+    context = {
         "gestion": gestion,
         "user": user,
         "is_manager": is_manager,
@@ -202,52 +210,49 @@ def gestion_detail(request, id):
         "view_template": view_template,
         "password_form": password_form,
         "gestion_form": gestion_form,
-        "biens": biens,
-        "total_units": total_units,
-        "total_tenants": total_tenants,
-        "total_rent": total_rent,
-    })
-
-from django.shortcuts import render
-from .models import RentPayment, Bien, Unit, Tenant
-
-def paiement_du_loyer_view(request):
-    """
-    Vue pour afficher la page des paiements de loyers avec options de recherche et filtres.
-    """
-    # Récupérer tous les paiements
-    payments = RentPayment.objects.all()
-
-    # Filtrage initial basé sur les requêtes GET (si disponibles)
-    bien_id = request.GET.get('bien')  # ID du bien
-    unit_number = request.GET.get('unit')  # Numéro de l'unité
-    tenant_name = request.GET.get('tenant')  # Nom du locataire
-    montant_min = request.GET.get('montant_min')  # Montant minimum
-    montant_max = request.GET.get('montant_max')  # Montant maximum
-
-    # Appliquer les filtres un par un
-    if bien_id:
-        payments = payments.filter(unit__bien__id=bien_id)
-    if unit_number:
-        payments = payments.filter(unit__unit_number__icontains=unit_number)
-    if tenant_name:
-        payments = payments.filter(tenant__name__icontains=tenant_name)
-    if montant_min:
-        payments = payments.filter(amount__gte=montant_min)
-    if montant_max:
-        payments = payments.filter(amount__lte=montant_max)
-
-    # Récupérer les options pour les filtres (biens, locataires, etc.)
-    biens = Bien.objects.all()
-    tenants = Tenant.objects.filter(status='current')
-    units = Unit.objects.all()
-
-    # Contexte envoyé au template
-    context = {
-        'payments': payments,
-        'biens': biens,
-        'tenants': tenants,
-        'units': units,
     }
 
-    return render(request, 'paiement_du_loyer.html', context)
+    if view_name == 'paiement_du_loyer':
+        context.update({
+            "payments": payments,
+            "biens": biens,
+            "tenants": tenants,
+            "units": units,
+        })
+    else:
+        context.update({
+            "biens": biens,
+            "total_units": total_units,
+            "total_tenants": total_tenants,
+            "total_rent": total_rent,
+        })
+
+    return render(request, "templates_gestion_detail/gestion_detail.html", context)
+
+def get_units_by_bien(request):
+    bien_id = request.GET.get('bien_id')
+    units = Unit.objects.filter(bien_id=bien_id)
+    units_data = [{'id': unit.id, 'unit_number': unit.unit_number} for unit in units]
+    return JsonResponse({'units': units_data})
+
+def get_tenants_by_bien(request):
+    bien_id = request.GET.get('bien_id')
+    tenants = Tenant.objects.filter(unit_tenants__unit__bien_id=bien_id).distinct()
+    tenants_data = [{'id': tenant.id, 'name': tenant.name} for tenant in tenants]
+    return JsonResponse({'tenants': tenants_data})
+
+def get_units_and_tenants_by_unit(request):
+    unit_id = request.GET.get('unit_id')
+    units = Unit.objects.filter(id=unit_id)
+    units_data = [{'id': unit.id, 'unit_number': unit.unit_number} for unit in units]
+    tenants = Tenant.objects.filter(unit_tenants__unit_id=unit_id).distinct()
+    tenants_data = [{'id': tenant.id, 'name': tenant.name} for tenant in tenants]
+    return JsonResponse({'units': units_data, 'tenants': tenants_data})
+
+def get_biens_and_tenants_by_tenant(request):
+    tenant_id = request.GET.get('tenant_id')
+    units = Unit.objects.filter(unit_tenants__tenant_id=tenant_id).distinct()
+    units_data = [{'id': unit.id, 'unit_number': unit.unit_number} for unit in units]
+    biens = Bien.objects.filter(units__unit_tenants__tenant_id=tenant_id).distinct()
+    biens_data = [{'id': bien.id, 'address': bien.address} for bien in biens]
+    return JsonResponse({'units': units_data, 'biens': biens_data})

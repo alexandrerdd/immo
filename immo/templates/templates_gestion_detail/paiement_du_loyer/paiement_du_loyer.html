@@ -1,1 +1,196 @@
-<p>En cours de développement</p>
+<div class="container mt-4">
+
+    <!-- Barre de recherche principale -->
+    <div class="search-bar">
+        <input type="text" id="search-input" placeholder="Rechercher un locataire..." />
+        <div id="search-criteria" class="criteria-list">
+            <!-- Les badges dynamiques pour les critères s'afficheront ici -->
+        </div>
+        <button id="filter-button" class="btn btn-secondary">Filtres</button>
+    </div>
+
+    <!-- Section des filtres avancés -->
+    <div id="filter-section" class="mt-4" style="display: none; border: 1px solid #ccc; padding: 15px; border-radius: 5px;">
+        <h5>Filtres avancés</h5>
+        <form id="filter-form" method="GET" action="">
+            <div class="form-row">
+                <!-- Filtre par bien -->
+                <div class="form-group col-md-4">
+                    <label for="filter-bien">Bien</label>
+                    <select id="filter-bien" class="form-control" name="bien">
+                        <option value="">Tous les biens</option>
+                        {% for bien in biens %}
+                            <option value="{{ bien.id }}" {% if request.GET.bien == bien.id|stringformat:"s" %}selected{% endif %}>
+                                {{ bien.address }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Filtre par unité -->
+                <div class="form-group col-md-4">
+                    <label for="filter-unit">Unité</label>
+                    <select id="filter-unit" class="form-control" name="unit">
+                        <option value="">Toutes les unités</option>
+                        {% for unit in units %}
+                            <option value="{{ unit.id }}" data-bien="{{ unit.bien.id }}" {% if request.GET.unit == unit.id|stringformat:"s" %}selected{% endif %}>
+                                {{ unit.unit_number }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Filtre par montant -->
+                <div class="form-group col-md-4">
+                    <label for="filter-montant-min">Montant (entre)</label>
+                    <div class="d-flex">
+                        <input type="number" id="filter-montant-min" class="form-control mr-2" name="montant_min" placeholder="Min" value="{{ request.GET.montant_min }}">
+                        <input type="number" id="filter-montant-max" class="form-control" name="montant_max" placeholder="Max" value="{{ request.GET.montant_max }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtre par locataire -->
+            <div class="form-group">
+                <label for="filter-tenant">Locataire</label>
+                <select id="filter-tenant" class="form-control" name="tenant">
+                    <option value="">Tous les locataires</option>
+                    {% for tenant in tenants %}
+                        <option value="{{ tenant.id }}" data-bien="{{ tenant.unit_tenants.first.unit.bien.id }}" {% if request.GET.tenant == tenant.id|stringformat:"s" %}selected{% endif %}>
+                            {{ tenant.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Appliquer les filtres</button>
+        </form>
+    </div>
+
+    <!-- Résultats -->
+    <div id="search-results" class="mt-4">
+        <h3>Résultats</h3>
+        <ul>
+            {% for payment in payments %}
+                <li>
+                    Bien : {{ payment.unit.bien.address }} <br>
+                    Unité : {{ payment.unit.unit_number }} <br>
+                    Locataire : {{ payment.tenant.name }} <br>
+                    Montant : {{ payment.amount }}€ <br>
+                    Date : {{ payment.date|date:"d/m/Y" }}
+                </li>
+            {% empty %}
+                <li>Aucun résultat trouvé.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<style>
+    .search-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 5px;
+        gap: 5px;
+    }
+
+    #search-input {
+        border: none;
+        outline: none;
+        flex: 1;
+        font-size: 16px;
+    }
+
+    .criteria-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    #filter-section {
+        background-color: #f9f9f9;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const filterButton = document.getElementById('filter-button');
+        const filterSection = document.getElementById('filter-section');
+        const filterBien = document.getElementById('filter-bien');
+        const filterUnit = document.getElementById('filter-unit');
+        const filterTenant = document.getElementById('filter-tenant');
+
+        // Toggle la section des filtres
+        filterButton.addEventListener('click', () => {
+            filterSection.style.display = filterSection.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Mettre à jour les unités et les locataires en fonction du bien sélectionné
+        filterBien.addEventListener('change', () => {
+            const bienId = filterBien.value;
+            const selectedTenant = filterTenant.value;
+
+            fetch(`/get_units_by_bien/?bien_id=${bienId}`)
+                .then(response => response.json())
+                .then(data => {
+                    filterUnit.innerHTML = '<option value="">Toutes les unités</option>';
+                    data.units.forEach(unit => {
+                        filterUnit.innerHTML += `<option value="${unit.id}">${unit.unit_number}</option>`;
+                    });
+                });
+
+            fetch(`/get_tenants_by_bien/?bien_id=${bienId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tenantOptions = data.tenants.map(tenant => `<option value="${tenant.id}">${tenant.name}</option>`);
+                    if (!tenantOptions.some(option => option.includes(`value="${selectedTenant}"`))) {
+                        filterTenant.value = "";
+                    }
+                    filterTenant.innerHTML = '<option value="">Tous les locataires</option>' + tenantOptions.join('');
+                });
+        });
+
+        // Mettre à jour les biens et les locataires en fonction de l'unité sélectionnée
+        filterUnit.addEventListener('change', () => {
+            const unitId = filterUnit.value;
+            const selectedTenant = filterTenant.value;
+
+            fetch(`/get_units_and_tenants_by_unit/?unit_id=${unitId}`)
+                .then(response => response.json())
+                .then(data => {
+                    filterBien.innerHTML = '<option value="">Tous les biens</option>';
+                    data.units.forEach(unit => {
+                        filterBien.innerHTML += `<option value="${unit.bien.id}">${unit.bien.address}</option>`;
+                    });
+
+                    const tenantOptions = data.tenants.map(tenant => `<option value="${tenant.id}">${tenant.name}</option>`);
+                    if (!tenantOptions.some(option => option.includes(`value="${selectedTenant}"`))) {
+                        filterTenant.value = "";
+                    }
+                    filterTenant.innerHTML = '<option value="">Tous les locataires</option>' + tenantOptions.join('');
+                });
+        });
+
+        // Mettre à jour les biens et les unités en fonction du locataire sélectionné
+        filterTenant.addEventListener('change', () => {
+            const tenantId = filterTenant.value;
+
+            fetch(`/get_biens_and_tenants_by_tenant/?tenant_id=${tenantId}`)
+                .then(response => response.json())
+                .then(data => {
+                    filterBien.innerHTML = '<option value="">Tous les biens</option>';
+                    data.biens.forEach(bien => {
+                        filterBien.innerHTML += `<option value="${bien.id}">${bien.address}</option>`;
+                    });
+
+                    filterUnit.innerHTML = '<option value="">Toutes les unités</option>';
+                    data.units.forEach(unit => {
+                        filterUnit.innerHTML += `<option value="${unit.id}">${unit.unit_number}</option>`;
+                    });
+                });
+        });
+    });
+</script>
