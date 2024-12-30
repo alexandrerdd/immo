@@ -1,5 +1,4 @@
 <div class="container mt-4">
-    <h2>Paiements de loyers</h2>
 
     <!-- Barre de recherche principale -->
     <div class="search-bar">
@@ -13,7 +12,7 @@
     <!-- Section des filtres avancés -->
     <div id="filter-section" class="mt-4" style="display: none; border: 1px solid #ccc; padding: 15px; border-radius: 5px;">
         <h5>Filtres avancés</h5>
-        <form id="filter-form" method="GET" action="">
+        <form id="filter-form" method="GET" action="{% url 'paiement_du_loyer' %}">
             <div class="form-row">
                 <!-- Filtre par bien -->
                 <div class="form-group col-md-4">
@@ -107,76 +106,72 @@
     }
 </style>
 
+<!-- Inclure les fichiers CSS et JavaScript de Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const filterButton = document.getElementById('filter-button');
         const filterSection = document.getElementById('filter-section');
-        const filterBien = document.getElementById('filter-bien');
+        const filterBien = $('#filter-bien');
         const filterUnit = document.getElementById('filter-unit');
-        const filterTenant = document.getElementById('filter-tenant');
+        const filterTenant = $('#filter-tenant');
+
+        // Initialiser Select2
+        filterBien.select2();
+        filterTenant.select2();
 
         // Fonction pour afficher/masquer les filtres
         filterButton.addEventListener('click', () => {
             filterSection.style.display = filterSection.style.display === 'none' ? 'block' : 'none';
         });
 
-        // Fonction pour réinitialiser une liste déroulante
-        const resetSelect = (selectElement, defaultOption) => {
-            const selectedValue = selectElement.value;
-            selectElement.innerHTML = `<option value="">${defaultOption}</option>`;
-            return selectedValue;
-        };
-
-        // Fonction pour éviter les mises à jour inutiles
-        const preserveExistingOptions = (selectElement, data, defaultOption) => {
-            const selectedValue = selectElement.value;
-            const currentOptions = Array.from(selectElement.options).map(option => option.value);
-            resetSelect(selectElement, defaultOption);
-            data.forEach(item => {
-                if (!currentOptions.includes(item.id.toString())) {
-                    selectElement.innerHTML += `<option value="${item.id}">${item.name || item.unit_number || item.address}</option>`;
-                }
-            });
-            preserveSelection(selectElement, selectedValue);
-        };
-
         // Mise à jour des unités et locataires selon le bien sélectionné
-        filterBien.addEventListener('change', () => {
-            if (filterBien.value === "") return; // Éviter les mises à jour inutiles
+        filterBien.on('change', () => {
+            const bienId = filterBien.val();
+            if (bienId === "") {
+                filterUnit.innerHTML = '<option value="">Toutes les unités</option>';
+                filterTenant.html('<option value="">Tous les locataires</option>');
+                return;
+            }
 
-            fetch(`/get_units_by_bien/?bien_id=${filterBien.value}`)
+            fetch(`/get_units_by_bien/?bien_id=${bienId}`)
                 .then(response => response.json())
-                .then(data => preserveExistingOptions(filterUnit, data.units, 'Toutes les unités'));
+                .then(data => {
+                    filterUnit.innerHTML = '<option value="">Toutes les unités</option>';
+                    data.units.forEach(unit => {
+                        filterUnit.innerHTML += `<option value="${unit.id}">${unit.unit_number}</option>`;
+                    });
+                });
 
-            fetch(`/get_tenants_by_bien/?bien_id=${filterBien.value}`)
+            fetch(`/get_tenants_by_bien/?bien_id=${bienId}`)
                 .then(response => response.json())
-                .then(data => preserveExistingOptions(filterTenant, data.tenants, 'Tous les locataires'));
+                .then(data => {
+                    filterTenant.html('<option value="">Tous les locataires</option>');
+                    data.tenants.forEach(tenant => {
+                        filterTenant.append(`<option value="${tenant.id}">${tenant.name}</option>`);
+                    });
+                });
         });
 
         // Mise à jour des biens et locataires selon l'unité sélectionnée
         filterUnit.addEventListener('change', () => {
-            if (filterUnit.value === "") return; // Éviter les mises à jour inutiles
+            const unitId = filterUnit.value;
+            if (unitId === "") {
+                filterTenant.html('<option value="">Tous les locataires</option>');
+                return;
+            }
 
-            fetch(`/get_bien_by_unit/?unit_id=${filterUnit.value}`)
+            fetch(`/get_tenants_by_unit/?unit_id=${unitId}`)
                 .then(response => response.json())
-                .then(data => preserveExistingOptions(filterBien, data.biens, 'Tous les biens'));
-
-            fetch(`/get_tenants_by_unit/?unit_id=${filterUnit.value}`)
-                .then(response => response.json())
-                .then(data => preserveExistingOptions(filterTenant, data.tenants, 'Tous les locataires'));
-        });
-
-        // Mise à jour des biens et unités selon le locataire sélectionné
-        filterTenant.addEventListener('change', () => {
-            if (filterTenant.value === "") return; // Éviter les mises à jour inutiles
-
-            fetch(`/get_biens_by_tenant/?tenant_id=${filterTenant.value}`)
-                .then(response => response.json())
-                .then(data => preserveExistingOptions(filterBien, data.biens, 'Tous les biens'));
-
-            fetch(`/get_units_by_tenant/?tenant_id=${filterTenant.value}`)
-                .then(response => response.json())
-                .then(data => preserveExistingOptions(filterUnit, data.units, 'Toutes les unités'));
+                .then(data => {
+                    filterTenant.html('<option value="">Tous les locataires</option>');
+                    data.tenants.forEach(tenant => {
+                        filterTenant.append(`<option value="${tenant.id}">${tenant.name}</option>`);
+                    });
+                });
         });
     });
 </script>

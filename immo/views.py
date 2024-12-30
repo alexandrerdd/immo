@@ -194,6 +194,17 @@ def gestion_detail(request, id):
         tenant_id = request.GET.get('tenant')
         montant_min = request.GET.get('montant_min')
         montant_max = request.GET.get('montant_max')
+
+        # Vérifiez si les paramètres sont valides et convertissez-les en entiers ou flottants
+        try:
+            bien_id = int(bien_id) if bien_id else None
+            unit_id = int(unit_id) if unit_id else None
+            tenant_id = int(tenant_id) if tenant_id else None
+            montant_min = float(montant_min) if montant_min else None
+            montant_max = float(montant_max) if montant_max else None
+        except ValueError:
+            return HttpResponse("Invalid parameters.")
+
         gestion, payments, biens, tenants, units = paiement_du_loyer_view(id, bien_id, unit_id, tenant_id, montant_min, montant_max)
     else:
         gestion, biens, total_units, total_tenants, total_rent = immeubles_view(id)
