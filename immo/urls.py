@@ -29,8 +29,9 @@ urlpatterns = [
     path('paiements/', paiement_du_loyer_view, name='paiement_du_loyer'),
     path('get_units_by_bien/', get_units_by_bien, name='get_units_by_bien'),
     path('get_tenants_by_bien/', get_tenants_by_bien, name='get_tenants_by_bien'),
-    path('get_units_and_tenants_by_unit/', get_units_and_tenants_by_unit, name='get_units_and_tenants_by_unit'),
-    path('get_biens_and_tenants_by_tenant/', get_biens_and_tenants_by_tenant, name='get_biens_and_tenants_by_tenant'),
-
+    path('get_bien_by_unit/', get_bien_by_unit, name='get_bien_by_unit'),
+    path('get_tenants_by_unit/', get_tenants_by_unit, name='get_tenants_by_unit'),
+    path('get_biens_by_tenant/', get_biens_by_tenant, name='get_biens_by_tenant'),
+    path('get_units_by_tenant/', get_units_by_tenant, name='get_units_by_tenant'),
 ]
     

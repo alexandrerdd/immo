@@ -231,28 +231,66 @@ def gestion_detail(request, id):
 
 def get_units_by_bien(request):
     bien_id = request.GET.get('bien_id')
-    units = Unit.objects.filter(bien_id=bien_id)
-    units_data = [{'id': unit.id, 'unit_number': unit.unit_number} for unit in units]
-    return JsonResponse({'units': units_data})
+    if not bien_id:
+        return JsonResponse({'error': 'Missing bien_id'}, status=400)
+    try:
+        units = Unit.objects.filter(bien_id=bien_id)
+        units_data = [{'id': unit.id, 'unit_number': unit.unit_number} for unit in units]
+        return JsonResponse({'units': units_data})
+    except ValueError:
+        return JsonResponse({'error': 'Invalid bien_id'}, status=400)
 
 def get_tenants_by_bien(request):
     bien_id = request.GET.get('bien_id')
-    tenants = Tenant.objects.filter(unit_tenants__unit__bien_id=bien_id).distinct()
-    tenants_data = [{'id': tenant.id, 'name': tenant.name} for tenant in tenants]
-    return JsonResponse({'tenants': tenants_data})
+    if not bien_id:
+        return JsonResponse({'error': 'Missing bien_id'}, status=400)
+    try:
+        tenants = Tenant.objects.filter(unit_tenants__unit__bien_id=bien_id).distinct()
+        tenants_data = [{'id': tenant.id, 'name': tenant.name} for tenant in tenants]
+        return JsonResponse({'tenants': tenants_data})
+    except ValueError:
+        return JsonResponse({'error': 'Invalid bien_id'}, status=400)
 
-def get_units_and_tenants_by_unit(request):
+def get_bien_by_unit(request):
     unit_id = request.GET.get('unit_id')
-    units = Unit.objects.filter(id=unit_id)
-    units_data = [{'id': unit.id, 'unit_number': unit.unit_number} for unit in units]
-    tenants = Tenant.objects.filter(unit_tenants__unit_id=unit_id).distinct()
-    tenants_data = [{'id': tenant.id, 'name': tenant.name} for tenant in tenants]
-    return JsonResponse({'units': units_data, 'tenants': tenants_data})
+    if not unit_id:
+        return JsonResponse({'error': 'Missing unit_id'}, status=400)
+    try:
+        biens = Bien.objects.filter(units__id=unit_id).distinct()
+        biens_data = [{'id': bien.id, 'address': bien.address} for bien in biens]
+        return JsonResponse({'biens': biens_data})
+    except ValueError:
+        return JsonResponse({'error': 'Invalid unit_id'}, status=400)
 
-def get_biens_and_tenants_by_tenant(request):
+def get_tenants_by_unit(request):
+    unit_id = request.GET.get('unit_id')
+    if not unit_id:
+        return JsonResponse({'error': 'Missing unit_id'}, status=400)
+    try:
+        tenants = Tenant.objects.filter(unit_tenants__unit_id=unit_id).distinct()
+        tenants_data = [{'id': tenant.id, 'name': tenant.name} for tenant in tenants]
+        return JsonResponse({'tenants': tenants_data})
+    except ValueError:
+        return JsonResponse({'error': 'Invalid unit_id'}, status=400)
+
+def get_biens_by_tenant(request):
     tenant_id = request.GET.get('tenant_id')
-    units = Unit.objects.filter(unit_tenants__tenant_id=tenant_id).distinct()
-    units_data = [{'id': unit.id, 'unit_number': unit.unit_number} for unit in units]
-    biens = Bien.objects.filter(units__unit_tenants__tenant_id=tenant_id).distinct()
-    biens_data = [{'id': bien.id, 'address': bien.address} for bien in biens]
-    return JsonResponse({'units': units_data, 'biens': biens_data})
+    if not tenant_id:
+        return JsonResponse({'error': 'Missing tenant_id'}, status=400)
+    try:
+        biens = Bien.objects.filter(units__unit_tenants__tenant_id=tenant_id).distinct()
+        biens_data = [{'id': bien.id, 'address': bien.address} for bien in biens]
+        return JsonResponse({'biens': biens_data})
+    except ValueError:
+        return JsonResponse({'error': 'Invalid tenant_id'}, status=400)
+
+def get_units_by_tenant(request):
+    tenant_id = request.GET.get('tenant_id')
+    if not tenant_id:
+        return JsonResponse({'error': 'Missing tenant_id'}, status=400)
+    try:
+        units = Unit.objects.filter(unit_tenants__tenant_id=tenant_id).distinct()
+        units_data = [{'id': unit.id, 'unit_number': unit.unit_number} for unit in units]
+        return JsonResponse({'units': units_data})
+    except ValueError:
+        return JsonResponse({'error': 'Invalid tenant_id'}, status=400)
