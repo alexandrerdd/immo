@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
-from immo.models import User, Gestion, Bien, Unit, Tenant, RentPayment, UnitTenant, GestionUser
+from immo.models import Gestion, Bien, Unit, Tenant, RentPayment, UnitTenant, GestionUser
 from django import forms
-from immo.fct_gest import immeubles_view, paiement_du_loyer_view
 from django.http import JsonResponse, HttpResponse
-import json
+from datetime import datetime
+from django.db.models import Sum
 
 class UserPasswordForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
@@ -42,7 +43,7 @@ def register_view(request):
         if User.objects.filter(email=email).exists():
             return HttpResponse("Email already registered.")
         
-        user = User.objects.create(username=username, email=email, password=password)
+        user = User.objects.create_user(username=username, email=email, password=password)
         return redirect("login_view")
     
     return render(request, "register.html")
@@ -51,16 +52,16 @@ def login_view(request):
     if request.method == "POST":
         identifier = request.POST["identifier"]
         password = request.POST["password"]
-        try:
-            user = User.objects.get(email=identifier, password=password)
-        except User.DoesNotExist:
-            try:
-                user = User.objects.get(username=identifier, password=password)
-            except User.DoesNotExist:
-                return HttpResponse("Invalid credentials.")
+        user = authenticate(request, username=identifier, password=password)
+        if user is None:
+            user = authenticate(request, email=identifier, password=password)
         
-        request.session['user_id'] = user.id
-        return redirect("welcome_view")
+        if user is not None:
+            login(request, user)
+            return redirect("welcome_view")
+        else:
+            return HttpResponse("Invalid credentials.")
+    
     return render(request, "login.html")
 
 def logout_view(request):
@@ -68,19 +69,13 @@ def logout_view(request):
     return redirect("login_view")
 
 def welcome_view(request):
-    user_id = request.session.get('user_id')
-    if not user_id:
-        return redirect("login_view")
-    user = User.objects.get(id=user_id)
+    user = request.user
     gestion_users = GestionUser.objects.filter(user=user)
     gestions = [gu.gestion for gu in gestion_users]
     return render(request, "welcome/welcome.html", {"user": user, "gestions": gestions})
 
+@login_required
 def associer_user_gestion(request, gestion_id):
-    user_id = request.session.get('user_id')
-    if not user_id:
-        return redirect('login_view')
-
     gestion = Gestion.objects.get(id=gestion_id)
     users = User.objects.exclude(gestionuser__gestion=gestion)
 
@@ -95,8 +90,7 @@ def associer_user_gestion(request, gestion_id):
             email = request.POST['new_email']
             password = request.POST['new_password']
             role = request.POST['new_role']
-            user = User.objects.create(username=username, email=email, password=password)
-            user.save()
+            user = User.objects.create_user(username=username, email=email, password=password)
             GestionUser.objects.create(user=user, gestion=gestion, role=role)
         return redirect('information_view', id=gestion_id)
 
@@ -105,8 +99,7 @@ def associer_user_gestion(request, gestion_id):
 @login_required
 def information_view(request, id):
     gestion = Gestion.objects.get(id=id)
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)
+    user = request.user
     is_manager = GestionUser.objects.filter(user=user, gestion=gestion, role='manager').exists()
     is_assistant = GestionUser.objects.filter(user=user, gestion=gestion, role='assistant').exists()
 
@@ -170,7 +163,16 @@ def information_view(request, id):
 
 @login_required
 def immeubles_view(request, id):
-    gestion, biens, total_units, total_tenants, total_rent = immeubles_view(id)
+    gestion = Gestion.objects.get(id=id)
+    biens = Bien.objects.filter(gestion=gestion)
+    total_units = sum(bien.units.count() for bien in biens) or 0
+    total_tenants = sum(unit.unit_tenants.filter(status='current').count() for bien in biens for unit in bien.units.all()) or 0
+    total_rent = sum(payment.amount for bien in biens for unit in bien.units.all() for payment in unit.payments.filter(date__year=datetime.now().year)) or 0
+
+    # Calculer la rentabilité de chaque bien
+    for bien in biens:
+        bien.total_rent = bien.units.aggregate(total_rent=Sum('payments__amount'))['total_rent'] or 0
+
     user = request.user
     context = {
         "gestion": gestion,
@@ -213,7 +215,26 @@ def paiement_du_loyer_view(request, id):
         montant_max = float(montant_max) if montant_max else None
     except ValueError:
         return HttpResponse("Invalid parameters.")
-    gestion, payments, biens, tenants, units = paiement_du_loyer_view(id, bien_id, unit_id, tenant_id, montant_min, montant_max)
+
+    gestion = Gestion.objects.get(id=id)
+    payments = RentPayment.objects.filter(unit__bien__gestion=gestion)
+
+    # Appliquer les filtres un par un
+    if bien_id:
+        payments = payments.filter(unit__bien__id=bien_id)
+    if unit_id:
+        payments = payments.filter(unit__id=unit_id)
+    if tenant_id:
+        payments = payments.filter(tenant__id=tenant_id)
+    if montant_min:
+        payments = payments.filter(amount__gte=montant_min)
+    if montant_max:
+        payments = payments.filter(amount__lte=montant_max)
+
+    # Récupérer les options pour les filtres (biens, locataires, etc.)
+    biens = Bien.objects.filter(gestion=gestion)
+    tenants = Tenant.objects.filter(status='current')
+    units = Unit.objects.filter(bien__gestion=gestion)
 
     user = request.user
     context = {

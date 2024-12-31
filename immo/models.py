@@ -1,13 +1,5 @@
 from django.db import models
-
-# User Model
-class User(models.Model):
-    username = models.CharField(max_length=30, unique=True)
-    email = models.EmailField(unique=True)
-    password = models.CharField(max_length=128)
-
-    def __str__(self):
-        return self.username
+from django.contrib.auth.models import User
 
 # Gestion Model
 class Gestion(models.Model):
@@ -15,6 +7,7 @@ class Gestion(models.Model):
     proprietor = models.CharField(max_length=100)
     proprietor_address = models.TextField(blank=True)
     email = models.EmailField(unique=True)
+
     def __str__(self):
         return self.name
 
@@ -48,7 +41,7 @@ class Bien(models.Model):
 class Unit(models.Model):
     bien = models.ForeignKey(Bien, related_name="units", on_delete=models.CASCADE)
     unit_number = models.CharField(max_length=50)
-    #type = models.CharField(max_length=50, blank=True)
+    type = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
         return f"Unite {self.unit_number} - {self.bien.address}"
@@ -81,10 +74,7 @@ class RentPayment(models.Model):
     tenant = models.ForeignKey(Tenant, related_name="payments", on_delete=models.CASCADE)
     unit = models.ForeignKey(Unit, related_name="payments", on_delete=models.CASCADE)
     date = models.DateField()
-    amount = models.DecimalField(max_digits=8, decimal_places=2)
+    amount = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
 
     def __str__(self):
         return f"Payment of {self.amount} by {self.tenant.name} for {self.unit.unit_number} on {self.date}"
-    # python manage.py add_gestion_user 
-    # python manage.py add_biens 
-    # python manage.py add_units

@@ -1,5 +1,7 @@
 from django.core.management.base import BaseCommand
-from immo.models import User, Gestion, GestionUser
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import User
+from immo.models import Gestion, GestionUser
 
 class Command(BaseCommand):
     help = 'Add a gestion and an associated user with a role'
@@ -10,7 +12,7 @@ class Command(BaseCommand):
             username='wanet',
             defaults={
                 'email': 'josettewanet@gmail.com',
-                'password': 'naevus769'  # Note: In a real application, make sure to hash the password
+                'password': make_password('naevus769')  # Hash the password
             }
         )
 
@@ -22,9 +24,10 @@ class Command(BaseCommand):
         # Create the gestion
         gestion, created = Gestion.objects.get_or_create(
             name='Wanet',
-            proprietor=user,
             defaults={
-                'proprietor_address': 'avenue isidore gerard 23'
+                'proprietor': user.username,
+                'proprietor_address': 'avenue isidore gerard 23',
+                'email': user.email  # Add the email of the proprietor
             }
         )
 

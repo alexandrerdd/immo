@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}My Application{% endblock %}</title>
+    <title>{% block title %}AXRIMMO{% endblock %}</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     {% load static %}
     <link rel="stylesheet" href="{% static 'styles.css' %}">
@@ -39,17 +39,24 @@
             <a class="navbar-brand" href="{% url 'welcome_view' %}">Home</a>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav mr-auto">
-                    {% if request.session.user_id %}
+                    {% if request.user.is_authenticated %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'welcome_view' %}">Account</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'logout_view' %}">Logout</a>
                         </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login_view' %}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'register_view' %}">Register</a>
+                        </li>
                     {% endif %}
                 </ul>
-                {% if logged_in_user %}
-                    <span class="navbar-text ml-auto">{{ logged_in_user.username }}</span>
+                {% if request.user.is_authenticated %}
+                    <span class="navbar-text ml-auto">{{ request.user.username }}</span>
                 {% endif %}
             </div>
         </nav>
@@ -59,7 +66,7 @@
     </main>
     <footer class="footer mt-auto py-3 bg-light">
         <div class="container">
-            <span class="text-muted">&copy; 2024 My Application</span>
+            <span class="text-muted">&copy; 2024 AXRIMMO</span>
         </div>
     </footer>
 </body>

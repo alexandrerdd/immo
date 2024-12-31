@@ -109,9 +109,10 @@ class Command(BaseCommand):
                     tenant, created = Tenant.objects.get_or_create(
                         name=unit_data['tenant_name'],
                         defaults={
-                            'rent_start_date': '2023-01-01',
-                            'current_rent': unit.rent,
+                            'rent_start_date': '2024-01-01',
+                            'current_rent': 100.00,
                             'debt': 0.00,
+                            'guarantee': 200.00,
                             'contract': None,
                             'status': 'current'
                         }
