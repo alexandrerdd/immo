@@ -103,7 +103,7 @@
         document.getElementById('delete-item').addEventListener('click', function() {
             if (confirm('Êtes-vous sûr de vouloir supprimer cet immeuble ?')) {
                 const bienId = currentRow.dataset.bienId;
-                fetch(`/gestion/{{ gestion.id }}/?view=immeubles&delete_bien=1`, {
+                fetch(`{% url 'immeubles_view' gestion.id %}?delete_bien=${bienId}`, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': '{{ csrf_token }}',
@@ -128,7 +128,7 @@
                 const address = addressInput.value;
                 const bienId = row.dataset.bienId;
 
-                fetch(`/gestion/{{ gestion.id }}/?view=immeubles&update_bien=1`, {
+                fetch(`{% url 'immeubles_view' gestion.id %}?update_bien=${bienId}`, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': '{{ csrf_token }}',

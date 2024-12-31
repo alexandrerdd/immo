@@ -1,5 +1,4 @@
 <div class="container mt-4">
-
     <!-- Barre de recherche principale -->
     <div class="search-bar">
         <input type="text" id="search-input" placeholder="Rechercher un locataire..." />
@@ -12,7 +11,7 @@
     <!-- Section des filtres avancés -->
     <div id="filter-section" class="mt-4" style="display: none; border: 1px solid #ccc; padding: 15px; border-radius: 5px;">
         <h5>Filtres avancés</h5>
-        <form id="filter-form" method="GET" action="{% url 'paiement_du_loyer' %}">
+        <form id="filter-form" method="GET" action="{% url 'paiement_du_loyer_view' gestion.id %}">
             <div class="form-row">
                 <!-- Filtre par bien -->
                 <div class="form-group col-md-4">

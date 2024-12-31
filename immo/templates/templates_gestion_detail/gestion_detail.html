@@ -6,28 +6,28 @@
             <h2>Menu</h2>
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link {% if view_name == 'information' %}active{% endif %}" href="{% url 'gestion_detail' gestion.id %}?view=information">Informations</a>
+                    <a class="nav-link {% if view_name == 'information' %}active{% endif %}" href="{% url 'information_view' gestion.id %}">Informations</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if view_name == 'immeubles' %}active{% endif %}" href="{% url 'gestion_detail' gestion.id %}?view=immeubles">Immeubles</a>
+                    <a class="nav-link {% if view_name == 'immeubles' %}active{% endif %}" href="{% url 'immeubles_view' gestion.id %}">Immeubles</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if view_name == 'locataires' %}active{% endif %}" href="{% url 'gestion_detail' gestion.id %}?view=locataires">Locataires</a>
+                    <a class="nav-link {% if view_name == 'locataires' %}active{% endif %}" href="{% url 'locataires_view' gestion.id %}">Locataires</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if view_name == 'paiement_du_loyer' %}active{% endif %}" href="{% url 'gestion_detail' gestion.id %}?view=paiement_du_loyer">Paiement du loyer</a>
+                    <a class="nav-link {% if view_name == 'paiement_du_loyer' %}active{% endif %}" href="{% url 'paiement_du_loyer_view' gestion.id %}">Paiement du loyer</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if view_name == 'frais' %}active{% endif %}" href="{% url 'gestion_detail' gestion.id %}?view=frais">Frais</a>
+                    <a class="nav-link {% if view_name == 'frais' %}active{% endif %}" href="{% url 'frais_view' gestion.id %}">Frais</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if view_name == 'analyses' %}active{% endif %}" href="{% url 'gestion_detail' gestion.id %}?view=analyses">Analyses</a>
+                    <a class="nav-link {% if view_name == 'analyses' %}active{% endif %}" href="{% url 'analyses_view' gestion.id %}">Analyses</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if view_name == 'ia_local' %}active{% endif %}" href="{% url 'gestion_detail' gestion.id %}?view=ia_local">IA Locale</a>
+                    <a class="nav-link {% if view_name == 'ia_local' %}active{% endif %}" href="{% url 'ia_local_view' gestion.id %}">IA Locale</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if view_name == 'chat_gpt' %}active{% endif %}" href="{% url 'gestion_detail' gestion.id %}?view=chat_gpt">Chat GPT</a>
+                    <a class="nav-link {% if view_name == 'chat_gpt' %}active{% endif %}" href="{% url 'chat_gpt_view' gestion.id %}">Chat GPT</a>
                 </li>
             </ul>
         </div>

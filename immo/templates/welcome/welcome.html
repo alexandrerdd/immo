@@ -7,7 +7,7 @@
     {% for gestion in gestions %}
         <li>
             {{ gestion.name }} - {{ gestion.proprietor_address }}
-            <form method="get" action="{% url 'gestion_detail' gestion.id %}">
+            <form method="get" action="{% url 'information_view' gestion.id %}">
                 <button type="submit">View Gestion</button>
             </form>
         </li>

@@ -98,15 +98,152 @@ def associer_user_gestion(request, gestion_id):
             user = User.objects.create(username=username, email=email, password=password)
             user.save()
             GestionUser.objects.create(user=user, gestion=gestion, role=role)
-        return redirect('information_view', id=gestion_id)
+        return redirect('gestion_detail', id=gestion_id)
 
     return render(request, 'templates_gestion_detail/informations/associer_user_gestion.html', {'gestion': gestion, 'users': users})
+
+def gestion_detail(request, id):
+    gestion = Gestion.objects.get(id=id)
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return redirect("login_view")
+    user = User.objects.get(id=user_id)
+    is_manager = GestionUser.objects.filter(user=user, gestion=gestion, role='manager').exists()
+    is_assistant = GestionUser.objects.filter(user=user, gestion=gestion, role='assistant').exists()
+    view_name = request.GET.get('view', 'information')
+
+    # Mapping view names to template paths
+    view_templates = {
+        'information': 'templates_gestion_detail/informations/information.html',
+        'immeubles': 'templates_gestion_detail/immeubles/immeubles.html',
+        'locataires': 'templates_gestion_detail/locataires/locataires.html',
+        'paiement_du_loyer': 'templates_gestion_detail/paiement_du_loyer/paiement_du_loyer.html',
+        'frais': 'templates_gestion_detail/frais/frais.html',
+        'analyses': 'templates_gestion_detail/analyses/analyses.html',
+        'ia_local': 'templates_gestion_detail/ia_local/ia_local.html',
+        'chat_gpt': 'templates_gestion_detail/chat_gpt/chat_gpt.html',
+    }
+    view_template = view_templates.get(view_name, 'templates_gestion_detail/informations/information.html')
+
+    if request.method == "POST":
+        if 'add_user' in request.GET and is_manager:
+            username = request.POST.get('username')
+            role = request.POST.get('role')
+            try:
+                new_user = User.objects.get(username=username)
+                GestionUser.objects.create(user=new_user, gestion=gestion, role=role)
+            except User.DoesNotExist:
+                return HttpResponse("User does not exist.")
+        elif 'edit_user' in request.GET and is_manager:
+            user_id = request.GET.get('edit_user')
+            role = request.GET.get('role')
+            try:
+                gestion_user = GestionUser.objects.get(user_id=user_id, gestion=gestion)
+                gestion_user.role = role
+                gestion_user.save()
+            except GestionUser.DoesNotExist:
+                return HttpResponse("GestionUser does not exist.")
+        elif 'delete_user' in request.GET and is_manager:
+            user_id = request.GET.get('delete_user')
+            try:
+                gestion_user = GestionUser.objects.get(user_id=user_id, gestion=gestion)
+                gestion_user.delete()
+            except GestionUser.DoesNotExist:
+                return HttpResponse("GestionUser does not exist.")
+        elif 'update_role' in request.GET and is_manager:
+            user_id = request.POST.get('user_id')
+            role = request.POST.get('role')
+            try:
+                gestion_user = GestionUser.objects.get(user_id=user_id, gestion=gestion)
+                gestion_user.role = role
+                gestion_user.save()
+            except GestionUser.DoesNotExist:
+                return HttpResponse("GestionUser does not exist.")
+        elif 'update_bien' in request.GET and is_manager:
+            try:
+                data = json.loads(request.body)
+                bien_id = data.get('bien_id')
+                address = data.get('address')
+                bien = Bien.objects.get(id=bien_id, gestion=gestion)
+                bien.address = address
+                bien.save()
+                return JsonResponse({'success': True})
+            except Bien.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Bien does not exist'})
+        elif 'delete_bien' in request.GET and is_manager:
+            try:
+                data = json.loads(request.body)
+                bien_id = data.get('bien_id')
+                bien = Bien.objects.get(id=bien_id, gestion=gestion)
+                bien.delete()
+                return JsonResponse({'success': True})
+            except Bien.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Bien does not exist'})
+        else:
+            # Handle updates to proprietor, contact, and address fields
+            field_name = request.POST.get('update_field')
+            field_value = request.POST.get(field_name)
+            if field_name in ['proprietor', 'contact', 'address']:
+                setattr(gestion, field_name, field_value)
+                gestion.save()
+
+    # Appel de la fonction immeubles_view
+    if view_name == 'paiement_du_loyer':
+        bien_id = request.GET.get('bien')
+        unit_id = request.GET.get('unit')
+        tenant_id = request.GET.get('tenant')
+        montant_min = request.GET.get('montant_min')
+        montant_max = request.GET.get('montant_max')
+
+        # Vérifiez si les paramètres sont valides et convertissez-les en entiers ou flottants
+        try:
+            bien_id = int(bien_id) if bien_id else None
+            unit_id = int(unit_id) if unit_id else None
+            tenant_id = int(tenant_id) if tenant_id else None
+            montant_min = float(montant_min) if montant_min else None
+            montant_max = float(montant_max) if montant_max else None
+        except ValueError:
+            return HttpResponse("Invalid parameters.")
+        print(id, bien_id, unit_id, tenant_id, montant_min, montant_max)
+        gestion, payments, biens, tenants, units = paiement_du_loyer_view(id, bien_id, unit_id, tenant_id, montant_min, montant_max)
+    else:
+        gestion, biens, total_units, total_tenants, total_rent = immeubles_view(id)
+
+    password_form = UserPasswordForm(instance=user)
+    gestion_form = GestionForm(instance=gestion)
+
+    context = {
+        "gestion": gestion,
+        "user": user,
+        "is_manager": is_manager,
+        "is_assistant": is_assistant,
+        "view_name": view_name,
+        "view_template": view_template,
+        "password_form": password_form,
+        "gestion_form": gestion_form,
+    }
+
+    if view_name == 'paiement_du_loyer':
+        context.update({
+            "payments": payments,
+            "biens": biens,
+            "tenants": tenants,
+            "units": units,
+        })
+    else:
+        context.update({
+            "biens": biens,
+            "total_units": total_units,
+            "total_tenants": total_tenants,
+            "total_rent": total_rent,
+        })
+
+    return render(request, "templates_gestion_detail/gestion_detail.html", context)
 
 @login_required
 def information_view(request, id):
     gestion = Gestion.objects.get(id=id)
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)
+    user = request.user
     is_manager = GestionUser.objects.filter(user=user, gestion=gestion, role='manager').exists()
     is_assistant = GestionUser.objects.filter(user=user, gestion=gestion, role='assistant').exists()
 
@@ -162,11 +299,9 @@ def information_view(request, id):
         "is_assistant": is_assistant,
         "password_form": password_form,
         "gestion_form": gestion_form,
-        "view_name": "information",
-        "view_template": "templates_gestion_detail/informations/information.html",
     }
 
-    return render(request, 'templates_gestion_detail/gestion_detail.html', context)
+    return render(request, 'templates_gestion_detail/informations/information.html', context)
 
 @login_required
 def immeubles_view(request, id):
@@ -179,10 +314,8 @@ def immeubles_view(request, id):
         "total_units": total_units,
         "total_tenants": total_tenants,
         "total_rent": total_rent,
-        "view_name": "immeubles",
-        "view_template": "templates_gestion_detail/immeubles/immeubles.html",
     }
-    return render(request, 'templates_gestion_detail/gestion_detail.html', context)
+    return render(request, 'templates_gestion_detail/immeubles/immeubles.html', context)
 
 @login_required
 def locataires_view(request, id):
@@ -191,10 +324,8 @@ def locataires_view(request, id):
     context = {
         "gestion": gestion,
         "user": user,
-        "view_name": "locataires",
-        "view_template": "templates_gestion_detail/locataires/locataires.html",
     }
-    return render(request, 'templates_gestion_detail/gestion_detail.html', context)
+    return render(request, 'templates_gestion_detail/locataires/locataires.html', context)
 
 @login_required
 def paiement_du_loyer_view(request, id):
@@ -223,10 +354,8 @@ def paiement_du_loyer_view(request, id):
         "biens": biens,
         "tenants": tenants,
         "units": units,
-        "view_name": "paiement_du_loyer",
-        "view_template": "templates_gestion_detail/paiement_du_loyer/paiement_du_loyer.html",
     }
-    return render(request, 'templates_gestion_detail/gestion_detail.html', context)
+    return render(request, 'templates_gestion_detail/paiement_du_loyer/paiement_du_loyer.html', context)
 
 @login_required
 def frais_view(request, id):
@@ -235,10 +364,8 @@ def frais_view(request, id):
     context = {
         "gestion": gestion,
         "user": user,
-        "view_name": "frais",
-        "view_template": "templates_gestion_detail/frais/frais.html",
     }
-    return render(request, 'templates_gestion_detail/gestion_detail.html', context)
+    return render(request, 'templates_gestion_detail/frais/frais.html', context)
 
 @login_required
 def analyses_view(request, id):
@@ -247,10 +374,8 @@ def analyses_view(request, id):
     context = {
         "gestion": gestion,
         "user": user,
-        "view_name": "analyses",
-        "view_template": "templates_gestion_detail/analyses/analyses.html",
     }
-    return render(request, 'templates_gestion_detail/gestion_detail.html', context)
+    return render(request, 'templates_gestion_detail/analyses/analyses.html', context)
 
 @login_required
 def ia_local_view(request, id):
@@ -259,10 +384,8 @@ def ia_local_view(request, id):
     context = {
         "gestion": gestion,
         "user": user,
-        "view_name": "ia_local",
-        "view_template": "templates_gestion_detail/ia_local/ia_local.html",
     }
-    return render(request, 'templates_gestion_detail/gestion_detail.html', context)
+    return render(request, 'templates_gestion_detail/ia_local/ia_local.html', context)
 
 @login_required
 def chat_gpt_view(request, id):
@@ -271,10 +394,8 @@ def chat_gpt_view(request, id):
     context = {
         "gestion": gestion,
         "user": user,
-        "view_name": "chat_gpt",
-        "view_template": "templates_gestion_detail/chat_gpt/chat_gpt.html",
     }
-    return render(request, 'templates_gestion_detail/gestion_detail.html', context)
+    return render(request, 'templates_gestion_detail/chat_gpt/chat_gpt.html', context)
 
 def get_units_by_bien(request):
     bien_id = request.GET.get('bien_id')

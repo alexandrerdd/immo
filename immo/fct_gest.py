@@ -16,6 +16,7 @@ def immeubles_view(gestion_id):
     return gestion, biens, total_units, total_tenants, total_rent
 
 def paiement_du_loyer_view(gestion_id, bien_id=None, unit_id=None, tenant_id=None, montant_min=None, montant_max=None):
+    print(gestion_id, bien_id, unit_id, tenant_id, montant_min, montant_max)
     gestion = Gestion.objects.get(id=gestion_id)
     payments = RentPayment.objects.filter(unit__bien__gestion=gestion)
 
