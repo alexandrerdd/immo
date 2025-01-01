@@ -190,9 +190,11 @@ def immeubles_view(request, id):
 def locataires_view(request, id):
     gestion = Gestion.objects.get(id=id)
     user = request.user
+    tenants = Tenant.objects.filter(unit_tenants__unit__bien__gestion=gestion).distinct()
     context = {
         "gestion": gestion,
         "user": user,
+        "tenants": tenants,
         "view_name": "locataires",
         "view_template": "templates_gestion_detail/locataires/locataires.html",
     }
@@ -217,15 +219,15 @@ def paiement_du_loyer_view(request, id):
         return HttpResponse("Invalid parameters.")
 
     gestion = Gestion.objects.get(id=id)
-    payments = RentPayment.objects.filter(unit__bien__gestion=gestion)
+    payments = RentPayment.objects.filter(UnitTenant__unit__bien__gestion=gestion)
 
     # Appliquer les filtres un par un
     if bien_id:
-        payments = payments.filter(unit__bien__id=bien_id)
+        payments = payments.filter(UnitTenant__unit__bien__id=bien_id)
     if unit_id:
-        payments = payments.filter(unit__id=unit_id)
+        payments = payments.filter(UnitTenant__unit__id=unit_id)
     if tenant_id:
-        payments = payments.filter(tenant__id=tenant_id)
+        payments = payments.filter(UnitTenant__tenant__id=tenant_id)
     if montant_min:
         payments = payments.filter(amount__gte=montant_min)
     if montant_max:

@@ -63,9 +63,9 @@
         <ul>
             {% for payment in payments %}
                 <li>
-                    Bien : {{ payment.unit.bien.address }} <br>
-                    Unité : {{ payment.unit.unit_number }} <br>
-                    Locataire : {{ payment.tenant.name }} <br>
+                    Bien : {{ payment.UnitTenant.unit.bien.address }} <br>
+                    Unité : {{ payment.UnitTenant.unit.unit_number }} <br>
+                    Locataire : {{ payment.UnitTenant.tenant.name }} <br>
                     Montant : {{ payment.amount }}€ <br>
                     Date : {{ payment.date|date:"d/m/Y" }}
                 </li>
