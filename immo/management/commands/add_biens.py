@@ -27,3 +27,5 @@ class Command(BaseCommand):
             Bien.objects.create(gestion=gestion, **bien_data)
 
         self.stdout.write(self.style.SUCCESS('Successfully added biens'))
+
+        # python manage.py add_gestion_user && python manage.py add_biens && python manage.py add_units && python manage.py add_tenants

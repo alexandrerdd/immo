@@ -167,11 +167,17 @@ def immeubles_view(request, id):
     biens = Bien.objects.filter(gestion=gestion)
     total_units = sum(bien.units.count() for bien in biens) or 0
     total_tenants = sum(unit.unit_tenants.filter(status='current').count() for bien in biens for unit in bien.units.all()) or 0
-    total_rent = sum(payment.amount for bien in biens for unit in bien.units.all() for payment in unit.payments.filter(date__year=datetime.now().year)) or 0
+    total_rent = sum(
+        payment.amount
+        for bien in biens
+        for unit in bien.units.all()
+        for unit_tenant in unit.unit_tenants.all()
+        for payment in unit_tenant.rent_payments.filter(date__year=datetime.now().year)
+    ) or 0
 
     # Calculer la rentabilité de chaque bien
     for bien in biens:
-        bien.total_rent = bien.units.aggregate(total_rent=Sum('payments__amount'))['total_rent'] or 0
+        bien.total_rent = bien.units.aggregate(total_rent=Sum('unit_tenants__rent_payments__amount'))['total_rent'] or 0
 
     user = request.user
     context = {
